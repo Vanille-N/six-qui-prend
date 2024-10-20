@@ -1,17 +1,35 @@
-use crate::game::{Trust, Player, Stacks};
+use crate::game::{Player, Stacks, Trust};
 use crate::objects::Card;
 
+enum Strat {
+    Increasing,
+    Decreasing,
+    Random,
+}
+
 pub struct Naive {
-    increasing: bool,
+    strat: Strat,
     hand: Vec<Trust<Card>>,
 }
 
 impl Naive {
-    pub fn new(increasing: bool) -> Self {
+    fn new(strat: Strat) -> Self {
         Self {
-            increasing,
+            strat,
             hand: Vec::new(),
         }
+    }
+
+    pub fn new_increasing() -> Self {
+        Self::new(Strat::Increasing)
+    }
+
+    pub fn new_decreasing() -> Self {
+        Self::new(Strat::Decreasing)
+    }
+
+    pub fn new_random() -> Self {
+        Self::new(Strat::Random)
     }
 }
 
@@ -21,9 +39,15 @@ impl Player for Naive {
     }
 
     fn preprocess(&mut self) {
-        self.hand.sort();
-        if !self.increasing {
-            self.hand.reverse();
+        match self.strat {
+            Strat::Increasing => {
+                self.hand.sort();
+                self.hand.reverse();
+            }
+            Strat::Decreasing => {
+                self.hand.sort();
+            }
+            Strat::Random => {}
         }
     }
 
@@ -32,6 +56,11 @@ impl Player for Naive {
     }
 
     fn resolve_underflow(&mut self, stacks: &Stacks, _: &[(Card, usize)]) -> usize {
-        stacks.iter().enumerate().min_by_key(|(_, stk)| stk.points()).unwrap().0
+        stacks
+            .iter()
+            .enumerate()
+            .min_by_key(|(_, stk)| stk.points())
+            .unwrap()
+            .0
     }
 }

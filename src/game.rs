@@ -1,5 +1,5 @@
-use crate::objects::{Card, Stack, Points};
-use rand::{thread_rng, seq::SliceRandom};
+use crate::objects::{Card, Points, Stack};
+use rand::{seq::SliceRandom, thread_rng};
 
 pub const NB_STK: usize = 4;
 pub const HAND_SZ: usize = 10;
@@ -8,6 +8,11 @@ pub const MAX_PLAYERS: usize = 10;
 
 pub type Stacks = [Stack; NB_STK];
 
+macro_rules! ifdebug {
+    ($($tk:tt)*) => {};
+    ($($tk:tt)*) => { $($tk)* };
+}
+
 // NOT COPY OR CLONE
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Trust<T>(T);
@@ -15,6 +20,22 @@ pub struct Trust<T>(T);
 impl<T> Trust<T> {
     pub fn read(&self) -> &T {
         &self.0
+    }
+}
+
+pub mod utils {
+    use super::*;
+    pub fn most_compat_stack(stacks: &Stacks, card: Card) -> Option<usize> {
+        stacks
+            .iter()
+            .enumerate()
+            .filter(|(_, stk)| stk.top() < card)
+            .max_by_key(|(_, stk)| stk.top())
+            .map(|(idx, _)| idx)
+    }
+
+    pub fn nb_stacks_clamp(idx: usize) -> usize {
+        idx.max(0).min(NB_STK)
     }
 }
 
@@ -59,23 +80,32 @@ impl Game {
     }
 
     fn round(&mut self) {
+        ifdebug! {
+            println!("New round begins");
+            println!("Current stacks are:");
+            for stk in &self.stacks {
+                println!("- {}", stk);
+            }
+        };
         let mut played = Vec::new();
         for (idx, player) in self.players.iter_mut().enumerate() {
             let Trust(card) = player.play_card(&self.stacks);
             played.push((card, idx));
+            ifdebug! {
+                println!("Player {} chooses {}", idx, card);
+            }
         }
         played.sort_by_key(|&(card, _)| card);
         for &(card, played_by) in &played {
-            let compat = self.stacks.iter_mut().filter(|stk| stk.top() < card)
-                .max_by_key(|stk| stk.top());
-            let chosen = match compat {
-                None => {
-                    let chosen = self.players[played_by].resolve_underflow(&self.stacks, &played);
-                    &mut self.stacks[chosen.max(0).min(NB_STK)]
-                },
-                Some(stk) => stk,
-            };
-            let score = chosen.push(card);
+            let idx = utils::most_compat_stack(&self.stacks, card)
+                .unwrap_or_else(|| self.players[played_by].resolve_underflow(&self.stacks, &played));
+            let score = self.stacks[utils::nb_stacks_clamp(idx)].push(card);
+            ifdebug! {
+                println!(
+                    "Card {} is placed, earning {} points to player {}",
+                    card, score, played_by
+                );
+            }
             self.scores[played_by] += score;
         }
     }

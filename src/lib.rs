@@ -1,4 +1,5 @@
-pub mod objects;
-pub mod game;
-pub mod supervisor;
 pub mod clients;
+pub mod game;
+pub mod objects;
+pub mod stats;
+pub mod supervisor;

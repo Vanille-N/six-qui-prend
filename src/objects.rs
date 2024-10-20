@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct Points(u64);
 
@@ -18,7 +20,18 @@ impl std::ops::AddAssign for Points {
     fn add_assign(&mut self, other: Self) {
         self.0 += other.0;
     }
+}
 
+impl fmt::Display for Points {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Into<f64> for &Points {
+    fn into(self) -> f64 {
+        self.0 as f64
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -48,9 +61,16 @@ impl Card {
     }
 }
 
+impl fmt::Display for Card {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{: >3}]", self.0)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Stack {
     top: Card,
+    cards: Vec<Card>,
     size: usize,
     points: Points,
 }
@@ -58,18 +78,25 @@ pub struct Stack {
 impl Stack {
     pub fn reset(&mut self) {
         self.top = Card(0);
+        self.cards.clear();
         self.size = 0;
         self.points = Points::null();
     }
 
     pub fn incr(&mut self, c: Card) {
         self.top = c;
+        self.cards.push(c);
         self.size += 1;
         self.points += c.score();
     }
 
     pub fn new() -> Self {
-        Self { top: Card(0), size: 0, points: Points::null(), }
+        Self {
+            top: Card(0),
+            cards: Vec::new(),
+            size: 0,
+            points: Points::null(),
+        }
     }
 
     pub fn size(&self) -> usize {
@@ -94,6 +121,15 @@ impl Stack {
         };
         self.incr(c);
         ans
+    }
+}
+
+impl fmt::Display for Stack {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for c in self.cards.iter() {
+            write!(f, "{}", c)?;
+        }
+        Ok(())
     }
 }
 
